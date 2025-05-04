@@ -1,0 +1,91 @@
+ReverseClient.java
+
+import ReverseModule.*;
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import java.io.*;
+
+public class ReverseClient {
+    public static void main(String[] args) {
+        try {
+            ORB orb = ORB.init(args, null);
+
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+            String name = "Reverse";
+            Reverse reverseImpl = ReverseHelper.narrow(ncRef.resolve_str(name));
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            System.out.print("Enter String: ");
+            String str = br.readLine();
+
+            String result = reverseImpl.reverse_string(str);
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+---------------------------------------------------------
+ReverseServer.java
+
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import org.omg.PortableServer.*;
+import ReverseModule.*;
+
+public class ReverseServer {
+    public static void main(String[] args) {
+        try {
+            ORB orb = ORB.init(args, null);
+
+            POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            rootPOA.the_POAManager().activate();
+
+            ReverseImpl reverseImpl = new ReverseImpl();
+            org.omg.CORBA.Object ref = rootPOA.servant_to_reference(reverseImpl);
+            Reverse href = ReverseHelper.narrow(ref);
+
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+            String name = "Reverse";
+            NameComponent[] path = ncRef.to_name(name);
+            ncRef.rebind(path, href);
+
+            System.out.println("Reverse Server Ready and Waiting...");
+            orb.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+----------------------------------------------------------
+ReverseImpl.java
+
+
+import ReverseModule.ReversePOA;
+
+class ReverseImpl extends ReversePOA {
+
+    public ReverseImpl() {
+        super();
+        System.out.println("Reverse Object Created");
+    }
+
+    public String reverse_string(String name) {
+        return "Server send: " + new StringBuilder(name).reverse().toString();
+    }
+}
+
+-------------------------------------------------------
+ReverseModule.java
+
+module ReverseModule {
+  interface Reverse {
+    string reverse_string(in string str);
+  };
+};
